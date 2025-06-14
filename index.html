@@ -1,157 +1,95 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>مُجتمع | تطبيق التواصل الاجتماعي</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css"> </head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تطبيقنا الاجتماعي</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+</head>
 <body>
-  <div id="auth-screen" class="screen active">
-    <div class="auth-container">
-      <div class="card auth-card">
-        <h1 class="app-title">مُجتمع</h1>
-        <p class="tagline">تواصل، شارك، اكتشف</p>
-
-        <div class="input-group">
-          <label for="email"><i class="fas fa-envelope"></i> البريد الإلكتروني</label>
-          <input type="email" id="email" placeholder="بريدك الإلكتروني">
-        </div>
-        <div class="input-group">
-          <label for="password"><i class="fas fa-lock"></i> كلمة المرور</label>
-          <input type="password" id="password" placeholder="كلمة المرور">
-        </div>
-        <div class="auth-actions">
-          <button id="login-btn" class="btn primary-btn">تسجيل الدخول</button>
-          <button id="signup-btn" class="btn secondary-btn">إنشاء حساب جديد</button>
-        </div>
-        <div class="divider"><span>أو</span></div>
-        <button id="google-login" class="btn google-btn">
-          <i class="fab fa-google"></i> الدخول بواسطة Google
-        </button>
-        <p class="error-message" id="auth-error"></p>
-      </div>
+    <div id="loadingScreen" class="active">
+        <div class="spinner"></div>
+        <p>جاري التحميل...</p>
     </div>
-  </div>
 
-  <div id="main-screen" class="screen hidden">
-    <header class="main-header">
-      <h2 id="header-title">الدردشات</h2>
-      <div class="header-actions">
-        <button id="notification-btn" class="icon-btn"><i class="fas fa-bell"></i></button>
-        <button id="logout-btn" class="icon-btn"><i class="fas fa-sign-out-alt"></i></button>
-      </div>
-    </header>
+    <div id="authScreen" class="auth-container active">
+        <h2>أهلاً بك!</h2>
+        <input type="email" id="authEmail" placeholder="البريد الإلكتروني">
+        <input type="password" id="authPassword" placeholder="كلمة المرور">
+        <button id="loginBtn">تسجيل الدخول</button>
+        <button id="signupBtn">إنشاء حساب جديد</button>
+        <div id="authError" class="error-message"></div>
+    </div>
 
-    <nav class="bottom-nav">
-      <button class="nav-btn active" data-target="chats"><i class="fas fa-comments"></i> <span>دردشات</span></button>
-      <button class="nav-btn" data-target="posts"><i class="fas fa-newspaper"></i> <span>منشورات</span></button>
-      <button class="nav-btn" data-target="search"><i class="fas fa-search"></i> <span>بحث</span></button>
-      <button class="nav-btn" data-target="profile"><i class="fas fa-user"></i> <span>ملفي</span></button>
-    </nav>
-
-    <main class="main-content">
-      <section id="chats-section" class="content-section active-section">
-        <div class="search-bar">
-          <input type="text" id="chat-search-input" placeholder="ابحث في الدردشات...">
-          <button class="icon-btn create-chat-btn" id="new-chat-btn"><i class="fas fa-plus"></i></button>
-        </div>
-        <div id="chats-list" class="list-container">
-          </div>
-      </section>
-
-      <section id="posts-section" class="content-section hidden">
-        <div class="create-post-card card">
-          <textarea id="post-content" placeholder="ماذا تريد أن تنشر؟" rows="3"></textarea>
-          <div class="post-actions-area">
-            <button id="publish-post" class="btn primary-btn small-btn">نشر</button>
-          </div>
-          </div>
-        <div id="posts-list" class="list-container posts-list">
-          </div>
-      </section>
-
-      <section id="search-section" class="content-section hidden">
-        <div class="search-bar">
-          <input type="text" id="search-input" placeholder="ابحث عن مستخدمين أو منشورات...">
-          <button class="icon-btn"><i class="fas fa-search"></i></button>
-        </div>
-        <div id="search-results" class="list-container">
-          </div>
-      </section>
-
-      <section id="profile-section" class="content-section hidden">
-        <div class="profile-card card">
-          <div class="profile-header-area">
-            <img id="profile-pic" src="https://via.placeholder.com/150/CCCCCC/FFFFFF?text=AV" alt="الصورة الشخصية" class="profile-avatar">
-            <h3 id="profile-name" class="profile-username">اسم المستخدم</h3>
-            <p id="profile-email" class="profile-email-text"></p>
-            <button id="edit-profile-btn" class="btn outline-btn small-btn"><i class="fas fa-edit"></i> تعديل الملف</button>
-          </div>
-          <div class="profile-stats-area">
-            <div class="stat-item">
-              <span id="posts-count" class="stat-number">0</span>
-              <span class="stat-label">منشورات</span>
-            </div>
-            <div class="stat-item">
-              <span id="followers-count" class="stat-number">0</span>
-              <span class="stat-label">متابعون</span>
-            </div>
-            <div class="stat-item">
-              <span id="following-count" class="stat-number">0</span>
-              <span class="stat-label">متابَعون</span>
-            </div>
-          </div>
-          <div class="profile-bio-area">
-            <h4>النبذة:</h4>
-            <p id="bio-text" class="profile-bio-text">لا يوجد وصف حاليًا...</p>
-          </div>
-        </div>
-      </section>
-
-      <section id="single-chat-screen" class="content-section hidden full-screen-overlay">
-        <header class="chat-header-bar">
-          <button id="back-to-chats-btn" class="icon-btn"><i class="fas fa-arrow-right"></i></button>
-          <img id="chat-partner-pic" src="https://via.placeholder.com/50/CCCCCC/FFFFFF?text=AV" alt="صورة الشريك" class="chat-header-avatar">
-          <h3 id="chat-partner-name">اسم الشريك</h3>
+    <div id="mainApp" class="app-container">
+        <header>
+            <h1>تطبيقنا</h1>
+            <nav>
+                <button id="showPostsBtn" class="active">المنشورات</button>
+                <button id="showChatsBtn">المحادثات</button>
+                <button id="showProfileBtn">الملف الشخصي</button>
+                <button id="logoutBtn">تسجيل الخروج</button>
+            </nav>
         </header>
-        <div id="messages-list" class="messages-container">
-          </div>
-        <div class="message-input-area">
-          <input type="text" id="message-input" placeholder="اكتب رسالة...">
-          <button id="send-message-btn" class="icon-btn primary-btn"><i class="fas fa-paper-plane"></i></button>
+
+        <div id="postsSection" class="section active">
+            <div class="new-post">
+                <textarea id="postContent" placeholder="ماذا يدور في ذهنك؟"></textarea>
+                <button id="publishPostBtn">نشر</button>
+            </div>
+            <div id="postsList" class="posts-list">
+                </div>
         </div>
-        <p id="typing-indicator" class="typing-indicator hidden">يكتب الآن...</p>
-      </section>
 
-      <div id="edit-profile-modal" class="modal hidden">
-        <div class="modal-content card">
-          <h3>تعديل الملف الشخصي</h3>
-          <div class="input-group">
-            <label for="edit-username">اسم المستخدم</label>
-            <input type="text" id="edit-username">
-          </div>
-          <div class="input-group">
-            <label for="edit-bio">النبذة</label>
-            <textarea id="edit-bio" rows="3"></textarea>
-          </div>
-          <div class="modal-actions">
-            <button id="save-profile-btn" class="btn primary-btn">حفظ التغييرات</button>
-            <button id="cancel-edit-profile-btn" class="btn secondary-btn">إلغاء</button>
-          </div>
+        <div id="chatsSection" class="section">
+            <div class="chat-sidebar">
+                <div class="search-users">
+                    <input type="text" id="searchUserInput" placeholder="ابحث عن مستخدم...">
+                    <button id="searchUserBtn">بحث</button>
+                </div>
+                <div id="searchResults" class="search-results-list">
+                    </div>
+                <h3>المحادثات الخاصة</h3>
+                <div id="chatsList" class="chats-list">
+                    </div>
+            </div>
+
+            <div id="chatContainer" class="chat-container">
+                <div class="chat-header">
+                    <button id="closeChatBtn">←</button>
+                    <img id="chatHeaderAvatar" src="https://via.placeholder.com/50/CCCCCC/FFFFFF?text=AV" alt="صورة الدردشة" class="chat-avatar">
+                    <h3 id="chatHeaderName">اسم الدردشة</h3>
+                </div>
+                <div id="messagesList" class="messages-list">
+                    </div>
+                <form id="messageInputForm" class="message-input-form">
+                    <input type="text" id="messageInput" placeholder="اكتب رسالتك...">
+                    <button type="submit">إرسال</button>
+                </form>
+            </div>
         </div>
-      </div>
 
-    </main>
-  </div>
+        <div id="profileSection" class="section">
+            <div class="profile-card">
+                <img id="profileAvatar" src="https://via.placeholder.com/150/CCCCCC/FFFFFF?text=AV" alt="صورة الملف الشخصي" class="profile-avatar">
+                <input type="file" id="profileImageUpload" accept="image/*" style="display: none;">
+                <button id="changeAvatarBtn">تغيير الصورة</button>
+                <h2 id="profileUsername">اسم المستخدم</h2>
+                <p id="profileEmail">البريد الإلكتروني: example@example.com</p>
+                <button id="editUsernameBtn">تعديل اسم المستخدم</button>
+                <input type="text" id="newUsernameInput" placeholder="اسم المستخدم الجديد" style="display: none;">
+                <button id="saveUsernameBtn" style="display: none;">حفظ</button>
+                <p>عدد المنشورات: <span id="postsCount">0</span></p>
+            </div>
+        </div>
+    </div>
 
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-  
-  <script type="module" src="auth.js"></script>
-  <script type="module" src="firestore.js"></script>
-  <script type="module" src="app.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="auth.js"></script>
+    <script src="firestore.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>

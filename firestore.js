@@ -1,99 +1,73 @@
-import { auth, db, rtdb } from './auth.js'; // تم إزالة 'storage' من الاستيراد
+// في ملف firestore.js
+// يجب أن يكون auth و db معرفين من firebase-config.js
 
-// إدارة المستخدمين
+const defaultAvatarUrl = "https://via.placeholder.com/150/CCCCCC/FFFFFF?text=AV"; // رابط صورة الأفاتار الافتراضية
+
+// دالة لإنشاء ملف شخصي للمستخدم عند التسجيل
+async function createUserProfile(userId, email) {
+    try {
+        await db.collection('users').doc(userId).set({
+            email: email,
+            username: email.split('@')[0], // اسم المستخدم الافتراضي هو جزء من البريد الإلكتروني قبل الـ @
+            profilePictureUrl: defaultAvatarUrl, // صورة افتراضية للملف الشخصي
+            postsCount: 0,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log("User profile created for:", email);
+    } catch (error) {
+        console.error("Error creating user profile:", error);
+    }
+}
+
+// دالة للحصول على بيانات ملف المستخدم
 function getUserProfile(userId) {
-  return db.collection('users').doc(userId).get();
+    return db.collection('users').doc(userId).get();
 }
 
-function updateUserProfile(userId, data) {
-  return db.collection('users').doc(userId).update(data);
+// دالة لتحديث اسم المستخدم
+async function updateUsername(userId, newUsername) {
+    try {
+        await db.collection('users').doc(userId).update({
+            username: newUsername
+        });
+        console.log("Username updated successfully.");
+        return true;
+    } catch (error) {
+        console.error("Error updating username:", error);
+        return false;
+    }
 }
 
-// جلب تفاصيل مستخدمين متعددين (مفيد للدردشات والمنشورات)
-function getUsersByIds(userIds) {
-  if (userIds.length === 0) return Promise.resolve([]);
-  return db.collection('users').where(firebase.firestore.FieldPath.documentId(), 'in', userIds).get()
-    .then(snapshot => snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+// دالة لتحديث صورة الملف الشخصي (هذه الدالة تفترض أنك قد رفعت الصورة إلى Cloudinary أو ما شابه وحصلت على الـ URL)
+async function updateProfilePicture(userId, imageUrl) {
+    try {
+        await db.collection('users').doc(userId).update({
+            profilePictureUrl: imageUrl
+        });
+        console.log("Profile picture updated successfully.");
+        return true;
+    } catch (error) {
+        console.error("Error updating profile picture:", error);
+        return false;
+    }
 }
 
-// إدارة الدردشات
-function createChat(participants, isGroup = false, groupName = '') {
-  const chatData = {
-    participants: participants.reduce((acc, uid) => {
-      acc[uid] = true;
-      return acc;
-    }, {}),
-    isGroup: isGroup,
-    lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
-    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-    lastMessage: "" // تهيئة الرسالة الأخيرة
-  };
-
-  if (isGroup) {
-    chatData.name = groupName;
-    chatData.admin = auth.currentUser.uid;
-  }
-
-  return db.collection('chats').add(chatData)
-    .then((docRef) => {
-      const chatId = docRef.id;
-      // إنشاء مرجع في Realtime DB للتحقق من القواعد (إذا لزم الأمر)
-      return rtdb.ref(`chats/${chatId}/participants`).set(chatData.participants).then(() => chatId);
-    });
-}
-
-function getMessages(chatId, limit = 50) {
-    return db.collection(`chats/${chatId}/messages`)
-             .orderBy('timestamp', 'desc')
-             .limit(limit); // للوقت الفعلي، نستخدم snapshot listener في app.js
-}
-
-function sendMessage(chatId, content) { // تم إزالة 'media'
-  const messageData = {
-    senderId: auth.currentUser.uid,
-    content: content,
-    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-  };
-
-  // لا يوجد دعم للميديا هنا
-  // if (media) {
-  //   messageData.mediaType = media.type;
-  //   messageData.mediaUrl = media.url;
-  // }
-
-  return db.collection(`chats/${chatId}/messages`).add(messageData)
-    .then(() => {
-      // تحديث آخر رسالة في الدردشة
-      return db.collection('chats').doc(chatId).update({
-        lastMessage: content,
-        lastMessageAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-    });
-}
-
-// إدارة المنشورات
-function createPost(content) { // تم إزالة 'imageFile'
+// دالة لنشر منشور جديد
+function createPost(content) {
   return getUserProfile(auth.currentUser.uid)
     .then((doc) => {
       const user = doc.data();
+
       const postData = {
         userId: auth.currentUser.uid,
-        username: user.username,
-        userProfilePic: user.profilePictureUrl, // صورة الملف الشخصي
+        username: user.username || auth.currentUser.email.split('@')[0], // اسم مستخدم احتياطي
+        userProfilePic: user.profilePictureUrl || defaultAvatarUrl, // الصورة الافتراضية هنا
         content: content,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
         likesCount: 0,
         commentsCount: 0
       };
 
-      // لا يوجد دعم لصور المنشورات
-      // if (imageFile) {
-      //   return uploadImage(imageFile, 'post_images')
-      //     .then((url) => {
-      //         postData.imageUrl = url;
-      //         return db.collection('posts').add(postData);
-      //     });
-      // }
       return db.collection('posts').add(postData);
     })
     .then(() => {
@@ -101,70 +75,136 @@ function createPost(content) { // تم إزالة 'imageFile'
       return db.collection('users').doc(auth.currentUser.uid).update({
         postsCount: firebase.firestore.FieldValue.increment(1)
       });
+    })
+    .catch((error) => {
+      console.error("Error creating post:", error);
+      alert("خطأ في نشر المنشور: " + error.message);
     });
 }
 
-function likePost(postId) {
-  const likeRef = db.collection(`posts/${postId}/likes`).doc(auth.currentUser.uid);
-  return db.runTransaction(transaction => {
-    return transaction.get(likeRef).then(doc => {
-      const postRef = db.collection('posts').doc(postId);
-      if (doc.exists) {
-        transaction.delete(likeRef);
-        transaction.update(postRef, { likesCount: firebase.firestore.FieldValue.increment(-1) });
-      } else {
-        transaction.set(likeRef, {
-          userId: auth.currentUser.uid,
-          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+
+// دالة للحصول على المنشورات
+function getPosts(callback) {
+    db.collection('posts')
+      .orderBy('timestamp', 'desc')
+      .onSnapshot((snapshot) => {
+        const posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        callback(posts);
+      }, (error) => {
+        console.error("Error fetching posts:", error);
+      });
+}
+
+// دالة لإضافة/إزالة إعجاب من منشور
+async function toggleLike(postId, userId) {
+    const postRef = db.collection('posts').doc(postId);
+    const postDoc = await postRef.get();
+    if (!postDoc.exists) return;
+
+    const postData = postDoc.data();
+    let currentLikes = postData.likes || {};
+
+    if (currentLikes[userId]) {
+        // إزالة الإعجاب
+        delete currentLikes[userId];
+        await postRef.update({
+            likes: currentLikes,
+            likesCount: firebase.firestore.FieldValue.increment(-1)
         });
-        transaction.update(postRef, { likesCount: firebase.firestore.FieldValue.increment(1) });
-      }
+    } else {
+        // إضافة الإعجاب
+        currentLikes[userId] = true;
+        await postRef.update({
+            likes: currentLikes,
+            likesCount: firebase.firestore.FieldValue.increment(1)
+        });
+    }
+}
+
+// دالة للبحث عن المستخدمين
+async function searchUsers(searchTerm) {
+    const users = [];
+    // البحث يبدأ بـ 'searchTerm' وينتهي بـ 'searchTerm' + '\uf8ff' (علامة يونيكود نهاية نطاق الأحرف)
+    const snapshot = await db.collection('users')
+                              .where('username', '>=', searchTerm)
+                              .where('username', '<=', searchTerm + '\uf8ff')
+                              .limit(10) // حد أقصى 10 نتائج
+                              .get();
+
+    snapshot.forEach(doc => {
+        const userData = doc.data();
+        // لا تظهر المستخدم الحالي في نتائج البحث
+        if (userData.email !== auth.currentUser.email) {
+            users.push({ id: doc.id, ...userData });
+        }
     });
-  });
+    return users;
 }
 
-// تم إزالة وظيفة رفع الصور (uploadImage)
+// دالة لإنشاء محادثة جديدة بين مستخدمين
+async function createChat(participants) { // participants يجب أن تكون مصفوفة من الـ UIDs
+    // التحقق مما إذا كانت الدردشة موجودة بالفعل بين نفس المشاركين
+    // هذه العملية أكثر تعقيداً مع حقل participants كـ Map
+    // لكن لغرض التبسيط، سننشئ دردشة جديدة أو نجد الموجودة بناءً على ID محدد
 
-// مؤشرات الكتابة (Realtime Database)
-function setTypingIndicator(chatId, isTyping) {
-  const userId = auth.currentUser.uid;
-  if (!userId) return Promise.reject("No user logged in.");
+    // إنشاء معرف فريد للدردشة بناءً على معرفات المشاركين لضمان عدم التكرار
+    const sortedParticipants = participants.sort();
+    const chatId = sortedParticipants.join('_'); // مثال: "uid1_uid2"
 
-  const typingRef = rtdb.ref(`typingIndicators/${chatId}/${userId}`);
-  
-  if (isTyping) {
-    return typingRef.set(true);
-  } else {
-    return typingRef.remove();
-  }
+    const chatRef = db.collection('chats').doc(chatId);
+    const chatDoc = await chatRef.get();
+
+    if (chatDoc.exists) {
+        return chatId; // الدردشة موجودة بالفعل
+    } else {
+        const chatData = {
+            participants: {}, // سيتم ملء هذا كـ Map
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            lastMessage: 'ابدأ محادثتكما الأولى!',
+            lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+            isGroup: false // هذه دردشة فردية
+        };
+        // ملء حقل participants كـ Map
+        participants.forEach(uid => {
+            chatData.participants[uid] = true;
+        });
+
+        await chatRef.set(chatData);
+        return chatId;
+    }
 }
 
-// الاستماع لمؤشرات الكتابة
-function onTypingStatusChanged(chatId, callback) {
-  return rtdb.ref(`typingIndicators/${chatId}`).on('value', (snapshot) => {
-    const typingUsers = snapshot.val();
-    callback(typingUsers);
-  });
+// دالة للحصول على رسائل محادثة معينة
+function getMessages(chatId, callback) {
+    db.collection('chats').doc(chatId).collection('messages')
+      .orderBy('timestamp', 'asc')
+      .onSnapshot((snapshot) => {
+        const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        callback(messages);
+      }, (error) => {
+        console.error("Error fetching messages:", error);
+      });
 }
 
-// إيقاف الاستماع لمؤشرات الكتابة
-function offTypingStatusChanged(chatId) {
-  rtdb.ref(`typingIndicators/${chatId}`).off();
-}
+// دالة لإرسال رسالة
+async function sendMessage(chatId, senderId, senderUsername, messageContent) {
+    try {
+        const messageData = {
+            senderId: senderId,
+            senderUsername: senderUsername,
+            content: messageContent,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        await db.collection('chats').doc(chatId).collection('messages').add(messageData);
 
-// تصدير الدوال
-export {
-  getUserProfile,
-  updateUserProfile,
-  getUsersByIds,
-  createChat,
-  getMessages,
-  sendMessage,
-  createPost,
-  likePost,
-  // uploadImage, // تم إزالة هذا
-  setTypingIndicator,
-  onTypingStatusChanged,
-  offTypingStatusChanged,
-  db // تصدير db للاستخدام في app.js للاستماع للتغييرات
-};
+        // تحديث آخر رسالة وتاريخها في مستند الدردشة الأم
+        await db.collection('chats').doc(chatId).update({
+            lastMessage: messageContent,
+            lastMessageAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        return true;
+    } catch (error) {
+        console.error("Error sending message:", error);
+        return false;
+    }
+}

@@ -1,98 +1,77 @@
-// تهيئة Firebase
-const firebaseConfig = {
-  apiKey: "AIzaSyAguAvkgdnbtkIsdBjR0Av0ikUOCbqc8lI",
-  authDomain: "chat-ttt-2023e.firebaseapp.com",
-  databaseURL: "https://chat-ttt-2023e-default-rtdb.firebaseio.com",
-  projectId: "chat-ttt-2023e",
-  // storageBucket: "chat-ttt-2023e.appspot.com", // تم إزالة هذا السطر
-  messagingSenderId: "89047633906",
-  appId: "1:89047633906:web:1358af9c956746a120e56b"
-};
+// في ملف auth.js
 
-firebase.initializeApp(firebaseConfig);
+// عناصر واجهة المستخدم
+const authScreen = document.getElementById('authScreen');
+const authEmail = document.getElementById('authEmail');
+const authPassword = document.getElementById('authPassword');
+const loginBtn = document.getElementById('loginBtn');
+const signupBtn = document.getElementById('signupBtn');
+const authError = document.getElementById('authError');
+const mainApp = document.getElementById('mainApp');
+const logoutBtn = document.getElementById('logoutBtn');
+const loadingScreen = document.getElementById('loadingScreen');
 
-// تصدير خدمات Firebase المهيأة مباشرةً
-export const auth = firebase.auth();
-export const db = firebase.firestore();
-export const rtdb = firebase.database();
-// export const storage = firebase.storage(); // تم إزالة هذا السطر
+let currentUser = null; // لتخزين بيانات المستخدم الحالي
 
-// تسجيل الدخول بالبريد الإلكتروني
-function loginWithEmail(email, password) {
-  return auth.signInWithEmailAndPassword(email, password);
+// دالة لتحديث واجهة المستخدم بناءً على حالة المصادقة
+function updateAuthUI(user) {
+    if (user) {
+        currentUser = user;
+        authScreen.classList.remove('active');
+        mainApp.classList.add('active');
+        // هنا يمكنك تحميل بيانات المستخدم والمحادثات والمنشورات
+        loadUserProfile(user.uid);
+        loadPosts();
+        loadChats(); // تحميل الدردشات عند تسجيل الدخول
+    } else {
+        currentUser = null;
+        authScreen.classList.add('active');
+        mainApp.classList.remove('active');
+    }
+    loadingScreen.classList.remove('active'); // إخفاء شاشة التحميل بمجرد تحديد الحالة
 }
 
-// إنشاء حساب جديد
-function signUpWithEmail(email, password, username) {
-  return auth.createUserWithEmailAndPassword(email, password)
-    .then((userCredential) => {
-      // إنشاء مستند المستخدم في Firestore
-      return createUserProfile(userCredential.user.uid, {
-        email: email,
-        username: username
-      });
-    });
-}
+// مراقبة حالة المصادقة
+auth.onAuthStateChanged((user) => {
+    updateAuthUI(user);
+});
 
-// تسجيل الدخول بـ Google
-function loginWithGoogle() {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  return auth.signInWithPopup(provider)
-    .then((userCredential) => {
-      // التحقق من وجود ملف المستخدم بعد تسجيل الدخول بـ Google
-      return checkUserProfile(userCredential.user.uid, userCredential.user.displayName, userCredential.user.photoURL);
-    });
-}
+// تسجيل الدخول
+loginBtn.addEventListener('click', async () => {
+    const email = authEmail.value;
+    const password = authPassword.value;
+    authError.textContent = ''; // مسح رسائل الخطأ السابقة
 
-// إنشاء ملف المستخدم
-function createUserProfile(userId, userData) {
-  // استخدام صورة افتراضية عامة من placeholder.com
-  const defaultAvatarUrl = "https://via.placeholder.com/150/CCCCCC/FFFFFF?text=AV"; 
-  
-  return db.collection('users').doc(userId).set({
-    userId: userId,
-    email: userData.email,
-    username: userData.username || userData.email.split('@')[0],
-    profilePictureUrl: userData.profilePictureUrl || defaultAvatarUrl, // لا يمكن رفع صورة، ستكون دائماً افتراضية أو من Google
-    bio: "",
-    postsCount: 0,
-    followersCount: 0,
-    followingCount: 0,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  });
-}
+    try {
+        await auth.signInWithEmailAndPassword(email, password);
+    } catch (error) {
+        authError.textContent = 'خطأ في تسجيل الدخول: ' + error.message;
+        console.error("Login Error:", error);
+    }
+});
 
-// التحقق من ملف المستخدم (يتم استدعاؤها بعد تسجيل الدخول، خاصة لـ Google)
-function checkUserProfile(userId, username, photoURL) {
-  return db.collection('users').doc(userId).get()
-    .then((doc) => {
-      if (!doc.exists) {
-        // إنشاء ملف إذا لم يكن موجودًا
-        return createUserProfile(userId, {
-          email: auth.currentUser.email,
-          username: username || auth.currentUser.email.split('@')[0],
-          profilePictureUrl: photoURL || null // استخدم صورة Google إذا كانت موجودة، وإلا فالافتراضية
-        });
-      }
-      return doc;
-    });
-}
+// إنشاء حساب
+signupBtn.addEventListener('click', async () => {
+    const email = authEmail.value;
+    const password = authPassword.value;
+    authError.textContent = ''; // مسح رسائل الخطأ السابقة
+
+    try {
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const userId = userCredential.user.uid;
+        // إنشاء ملف شخصي جديد للمستخدم في Firestore
+        await createUserProfile(userId, email);
+    } catch (error) {
+        authError.textContent = 'خطأ في إنشاء الحساب: ' + error.message;
+        console.error("Signup Error:", error);
+    }
+});
 
 // تسجيل الخروج
-function logout() {
-  return auth.signOut();
-}
-
-// الاستماع لتغير حالة المصادقة
-function onAuthStateChanged(callback) {
-  auth.onAuthStateChanged(callback);
-}
-
-// تصدير الدوال للاستخدام في ملفات أخرى
-export {
-  loginWithEmail,
-  signUpWithEmail,
-  loginWithGoogle,
-  logout,
-  onAuthStateChanged,
-};
+logoutBtn.addEventListener('click', async () => {
+    try {
+        await auth.signOut();
+    } catch (error) {
+        console.error("Logout Error:", error);
+    }
+});
