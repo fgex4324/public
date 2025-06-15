@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تطبيقنا الاجتماعي</title>
+    <title>تطبيق الدردشة</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
@@ -26,7 +26,7 @@
 
     <div id="mainApp" class="app-container">
         <header>
-            <h1>تطبيقنا</h1>
+            <h1>تطبيق الدردشة</h1>
             <nav>
                 <button id="showPostsBtn" class="active">المنشورات</button>
                 <button id="showChatsBtn">المحادثات</button>
@@ -47,7 +47,7 @@
         <div id="chatsSection" class="section">
             <div class="chat-sidebar">
                 <div class="search-users">
-                    <input type="text" id="searchUserInput" placeholder="ابحث عن مستخدم...">
+                    <input type="text" id="searchUserInput" placeholder="ابحث عن مستخدم (الاسم أو البريد)...">
                     <button id="searchUserBtn">بحث</button>
                 </div>
                 <div id="searchResults" class="search-results-list">
@@ -62,12 +62,13 @@
                     <button id="closeChatBtn">←</button>
                     <img id="chatHeaderAvatar" src="https://via.placeholder.com/50/CCCCCC/FFFFFF?text=AV" alt="صورة الدردشة" class="chat-avatar">
                     <h3 id="chatHeaderName">اسم الدردشة</h3>
-                </div>
+                    <span id="chatStatus" class="chat-status"></span> </div>
                 <div id="messagesList" class="messages-list">
                     </div>
                 <form id="messageInputForm" class="message-input-form">
-                    <input type="text" id="messageInput" placeholder="اكتب رسالتك...">
-                    <button type="submit">إرسال</button>
+                    <textarea id="messageInput" placeholder="اكتب رسالتك..." rows="1"></textarea>
+                    <button type="submit" id="sendMessageBtn">إرسال</button>
+                    <button type="button" id="recordAudioBtn" class="audio-btn">🎤</button>
                 </form>
             </div>
         </div>
@@ -83,6 +84,41 @@
                 <input type="text" id="newUsernameInput" placeholder="اسم المستخدم الجديد" style="display: none;">
                 <button id="saveUsernameBtn" style="display: none;">حفظ</button>
                 <p>عدد المنشورات: <span id="postsCount">0</span></p>
+                <button id="showSettingsBtn" class="settings-btn">إعدادات التطبيق</button>
+            </div>
+
+            <div id="settingsCard" class="profile-card settings-card" style="display: none;">
+                <h3>إعدادات Firebase</h3>
+                <div class="setting-item">
+                    <label for="apiKeyInput">API Key:</label>
+                    <input type="text" id="apiKeyInput" placeholder="API Key">
+                </div>
+                <div class="setting-item">
+                    <label for="authDomainInput">Auth Domain:</label>
+                    <input type="text" id="authDomainInput" placeholder="Auth Domain">
+                </div>
+                <div class="setting-item">
+                    <label for="databaseURLInput">Database URL:</label>
+                    <input type="text" id="databaseURLInput" placeholder="Database URL">
+                </div>
+                <div class="setting-item">
+                    <label for="projectIdInput">Project ID:</label>
+                    <input type="text" id="projectIdInput" placeholder="Project ID">
+                </div>
+                <div class="setting-item">
+                    <label for="storageBucketInput">Storage Bucket:</label>
+                    <input type="text" id="storageBucketInput" placeholder="Storage Bucket">
+                </div>
+                <div class="setting-item">
+                    <label for="messagingSenderIdInput">Messaging Sender ID:</label>
+                    <input type="text" id="messagingSenderIdInput" placeholder="Messaging Sender ID">
+                </div>
+                <div class="setting-item">
+                    <label for="appIdInput">App ID:</label>
+                    <input type="text" id="appIdInput" placeholder="App ID">
+                </div>
+                <button id="saveFirebaseConfigBtn">حفظ إعدادات Firebase</button>
+                <div id="firebaseConfigMessage" class="error-message"></div>
             </div>
         </div>
     </div>
