@@ -3,126 +3,278 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تطبيق الدردشة</title>
+    <title>تواصل - تطبيق الدردشة والتواصل</title>
+    <!-- ربط ملف الأنماط الرئيسي -->
     <link rel="stylesheet" href="style.css">
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+    <!-- Font Awesome Icons for modern UI elements (أيقونات واجهة مستخدم عصرية) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Google Fonts - Cairo for Arabic text (خط القاهرة للنصوص العربية) -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div id="loadingScreen" class="active">
+
+    <!-- شاشة التحميل الأولية (تظهر عند بدء تشغيل التطبيق) -->
+    <div id="loadingScreen" class="loading-screen active">
         <div class="spinner"></div>
-        <p>جاري التحميل...</p>
+        <p class="loading-text">جاري تحميل التطبيق، الرجاء الانتظار...</p>
     </div>
 
-    <div id="authScreen" class="auth-container active">
-        <h2>أهلاً بك!</h2>
-        <input type="email" id="authEmail" placeholder="البريد الإلكتروني">
-        <input type="password" id="authPassword" placeholder="كلمة المرور">
-        <button id="loginBtn">تسجيل الدخول</button>
-        <button id="signupBtn">إنشاء حساب جديد</button>
-        <div id="authError" class="error-message"></div>
+    <!-- شاشة المصادقة (تسجيل الدخول / إنشاء حساب) -->
+    <div id="authScreen" class="screen auth-screen">
+        <div class="auth-card">
+            <h2>أهلاً بك في تواصل!</h2>
+            <form id="authForm" class="auth-form">
+                <input type="email" id="authEmail" placeholder="البريد الإلكتروني" required>
+                <input type="password" id="authPassword" placeholder="كلمة المرور" required>
+                <button type="submit" id="authSubmitBtn">تسجيل الدخول</button>
+                <p class="auth-error" id="authError"></p>
+                <p class="auth-toggle-text">
+                    <a href="#" id="toggleAuthMode">ليس لديك حساب؟ قم بإنشاء حساب جديد</a>
+                </p>
+            </form>
+        </div>
     </div>
 
-    <div id="mainApp" class="app-container">
+    <!-- التطبيق الرئيسي بعد تسجيل الدخول -->
+    <div id="mainApp" class="screen main-app">
         <header>
-            <h1>تطبيق الدردشة</h1>
+            <div class="header-left">
+                <h1>تواصل</h1>
+            </div>
             <nav>
-                <button id="showPostsBtn" class="active">المنشورات</button>
-                <button id="showChatsBtn">المحادثات</button>
-                <button id="showProfileBtn">الملف الشخصي</button>
-                <button id="logoutBtn">تسجيل الخروج</button>
+                <button id="showPostsBtn" class="nav-button active">
+                    <i class="fas fa-bullhorn"></i> المنشورات
+                </button>
+                <button id="showChatsBtn" class="nav-button">
+                    <i class="fas fa-comments"></i> الدردشات
+                </button>
+                <button id="showAcquaintancesBtn" class="nav-button">
+                    <i class="fas fa-users"></i> المعارف
+                </button>
+                <button id="showProfileBtn" class="nav-button">
+                    <i class="fas fa-user-circle"></i> الملف الشخصي
+                </button>
             </nav>
+            <div class="header-right">
+                <button id="toggleDarkModeBtn" title="تبديل الوضع الليلي/النهاري" class="header-icon-button">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button id="logoutBtn" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+                </button>
+            </div>
         </header>
 
-        <div id="postsSection" class="section active">
-            <div class="new-post">
-                <textarea id="postContent" placeholder="ماذا يدور في ذهنك؟"></textarea>
-                <button id="publishPostBtn">نشر</button>
-            </div>
-            <div id="postsList" class="posts-list">
-                </div>
-        </div>
+        <!-- الشريط الجانبي للمستخدمين المتصلين (يظهر على الشاشات الكبيرة) -->
+        <aside id="onlineUsersSidebar" class="online-users-sidebar">
+            <h3>
+                المتصلون الآن <span id="onlineUsersCount" class="online-count">(0)</span>
+            </h3>
+            <ul id="onlineUsersList" class="online-users-list">
+                <!-- قائمة المستخدمين المتصلين ستعرض هنا بواسطة JavaScript -->
+            </ul>
+        </aside>
 
-        <div id="chatsSection" class="section">
-            <div class="chat-sidebar">
-                <div class="search-users">
-                    <input type="text" id="searchUserInput" placeholder="ابحث عن مستخدم (الاسم أو البريد)...">
-                    <button id="searchUserBtn">بحث</button>
+        <main class="main-content">
+            <!-- قسم المنشورات -->
+            <section id="postsSection" class="section active">
+                <div class="section-header">
+                    <h2>آخر المنشورات</h2>
+                    <button id="refreshPostsBtn" class="icon-button">
+                        <i class="fas fa-sync-alt"></i> تحديث
+                    </button>
                 </div>
-                <div id="searchResults" class="search-results-list">
+                <div class="card post-input-area">
+                    <textarea id="postContent" placeholder="ماذا يدور في ذهنك؟"></textarea>
+                    <div class="post-options">
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="privatePostCheckbox">
+                            <span class="checkmark"></span>
+                            منشور خاص (للمعارف فقط)
+                        </label>
+                        <button id="publishPostBtn" class="primary-button">
+                            <i class="fas fa-paper-plane"></i> نشر
+                        </button>
                     </div>
-                <h3>المحادثات الخاصة</h3>
-                <div id="chatsList" class="chats-list">
+                </div>
+                <div id="postsList" class="posts-list">
+                    <!-- المنشورات ستعرض هنا بواسطة JavaScript -->
+                </div>
+            </section>
+
+            <!-- قسم الدردشات -->
+            <section id="chatsSection" class="section chats-section">
+                <div class="chat-sidebar card">
+                    <div class="chat-search-bar">
+                        <input type="text" id="searchUserInput" placeholder="ابحث عن مستخدمين...">
+                        <button id="searchUserBtn" class="icon-button">
+                            <i class="fas fa-search"></i>
+                        </button>
                     </div>
-            </div>
-
-            <div id="chatContainer" class="chat-container">
-                <div class="chat-header">
-                    <button id="closeChatBtn">←</button>
-                    <img id="chatHeaderAvatar" src="https://via.placeholder.com/50/CCCCCC/FFFFFF?text=AV" alt="صورة الدردشة" class="chat-avatar">
-                    <h3 id="chatHeaderName">اسم الدردشة</h3>
-                    <span id="chatStatus" class="chat-status"></span> </div>
-                <div id="messagesList" class="messages-list">
+                    <div id="searchResults" class="search-results-list">
+                        <!-- نتائج البحث ستعرض هنا -->
                     </div>
-                <form id="messageInputForm" class="message-input-form">
-                    <textarea id="messageInput" placeholder="اكتب رسالتك..." rows="1"></textarea>
-                    <button type="submit" id="sendMessageBtn">إرسال</button>
-                    <button type="button" id="recordAudioBtn" class="audio-btn">🎤</button>
-                </form>
-            </div>
-        </div>
+                    <h3>المحادثات الخاصة</h3>
+                    <div id="chatsList" class="chats-list">
+                        <!-- قائمة الدردشات ستعرض هنا بواسطة JavaScript -->
+                    </div>
+                </div>
 
-        <div id="profileSection" class="section">
-            <div class="profile-card">
-                <img id="profileAvatar" src="https://via.placeholder.com/150/CCCCCC/FFFFFF?text=AV" alt="صورة الملف الشخصي" class="profile-avatar">
-                <input type="file" id="profileImageUpload" accept="image/*" style="display: none;">
-                <button id="changeAvatarBtn">تغيير الصورة</button>
-                <h2 id="profileUsername">اسم المستخدم</h2>
-                <p id="profileEmail">البريد الإلكتروني: example@example.com</p>
-                <button id="editUsernameBtn">تعديل اسم المستخدم</button>
-                <input type="text" id="newUsernameInput" placeholder="اسم المستخدم الجديد" style="display: none;">
-                <button id="saveUsernameBtn" style="display: none;">حفظ</button>
-                <p>عدد المنشورات: <span id="postsCount">0</span></p>
-                <button id="showSettingsBtn" class="settings-btn">إعدادات التطبيق</button>
-            </div>
+                <!-- حاوية الدردشة الفعلية (تظهر كشاشة كاملة على الموبايل وداخل القسم على الديسكتوب) -->
+                <div id="chatContainer" class="chat-container">
+                    <div class="chat-header">
+                        <button id="closeChatBtn" class="header-icon-button">
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                        <img src="" alt="صورة الدردشة" class="chat-avatar" id="chatHeaderAvatar">
+                        <div class="chat-header-info">
+                            <h3 id="chatHeaderName">اسم الدردشة</h3>
+                            <span id="chatStatus" class="chat-status"></span>
+                        </div>
+                        <!--
+                            تم إزالة أزرار إدارة الدردشة مؤقتاً هنا
+                            لأنها تحتاج لمنطق معقد يخرج عن نطاق الخطة المجانية الأولية
+                            أو قد يسبب تعقيدات غير ضرورية حالياً.
+                            <div id="chatManagement" class="chat-management" style="display: none;">
+                                <button id="banUserBtn" title="حظر المستخدم">🚫</button>
+                                <button id="archiveChatBtn" title="أرشفة المحادثة">📁</button>
+                                <button id="leaveChatBtn" title="مغادرة المحادثة">👋</button>
+                            </div>
+                        -->
+                    </div>
+                    <div id="messagesList" class="messages-list">
+                        <!-- الرسائل ستعرض هنا بواسطة JavaScript -->
+                    </div>
+                    <form id="messageInputForm" class="message-input-form">
+                        <button type="button" id="recordAudioBtn" title="رسالة صوتية" class="icon-button">
+                            <i class="fas fa-microphone"></i>
+                        </button>
+                        <textarea id="messageInput" placeholder="اكتب رسالة..." rows="1"></textarea>
+                        <button type="button" id="emojiPickerBtn" title="إيموجي" class="icon-button">
+                            <i class="fas fa-smile"></i>
+                        </button>
+                        <button type="submit" id="sendMessageBtn" title="إرسال" class="primary-button">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </form>
+                    <div id="emojiPicker" class="emoji-picker card">
+                        <!-- الإيموجي ستعرض هنا بواسطة JavaScript -->
+                    </div>
+                </div>
+            </section>
 
-            <div id="settingsCard" class="profile-card settings-card" style="display: none;">
-                <h3>إعدادات Firebase</h3>
-                <div class="setting-item">
-                    <label for="apiKeyInput">API Key:</label>
-                    <input type="text" id="apiKeyInput" placeholder="API Key">
+            <!-- قسم المعارف -->
+            <section id="acquaintancesSection" class="section">
+                <div class="section-header">
+                    <h2>معارفي</h2>
+                    <button id="refreshAcquaintancesBtn" class="icon-button">
+                        <i class="fas fa-sync-alt"></i> تحديث
+                    </button>
                 </div>
-                <div class="setting-item">
-                    <label for="authDomainInput">Auth Domain:</label>
-                    <input type="text" id="authDomainInput" placeholder="Auth Domain">
+                <div id="acquaintancesList" class="card user-list-card">
+                    <!-- قائمة المعارف ستعرض هنا -->
+                    <div class="empty">لا توجد لديك معارف بعد.</div>
                 </div>
-                <div class="setting-item">
-                    <label for="databaseURLInput">Database URL:</label>
-                    <input type="text" id="databaseURLInput" placeholder="Database URL">
+            </section>
+
+            <!-- قسم الملف الشخصي -->
+            <section id="profileSection" class="section">
+                <div class="section-header">
+                    <h2>ملفي الشخصي</h2>
+                    <button id="showSettingsBtn" class="primary-button" style="display: none;">
+                        <i class="fas fa-cogs"></i> إعدادات Firebase (المسؤول)
+                    </button>
                 </div>
-                <div class="setting-item">
-                    <label for="projectIdInput">Project ID:</label>
-                    <input type="text" id="projectIdInput" placeholder="Project ID">
+                <div class="card profile-card">
+                    <div class="profile-avatar-wrapper">
+                        <img src="https://via.placeholder.com/150/CCCCCC/000000?text=AV" alt="صورة الملف الشخصي" id="profileAvatar" class="profile-avatar">
+                        <input type="file" id="profileImageUpload" accept="image/*" style="display: none;">
+                        <button id="changeAvatarBtn" class="change-avatar-btn">
+                            <i class="fas fa-camera"></i> تغيير الصورة
+                        </button>
+                    </div>
+                    <h3 id="profileUsername">اسم المستخدم</h3>
+                    <input type="text" id="newUsernameInput" placeholder="اسم المستخدم الجديد" style="display: none;">
+                    <button id="saveUsernameBtn" class="primary-button" style="display: none;">
+                        <i class="fas fa-save"></i> حفظ الاسم
+                    </button>
+                    <span id="profileEmail" class="text-secondary">البريد الإلكتروني: loading...</span>
+                    <p id="profileStatusMessage" class="text-secondary">لا توجد حالة محددة.</p>
+
+                    <div class="profile-stats">
+                        <span>المنشورات: <strong id="postsCount">0</strong></span>
+                        <span>المعارف: <strong id="acquaintancesCount">0</strong></span>
+                        <span>المنشورات المحفوظة: <strong id="savedPostsCount">0</strong></span>
+                    </div>
+                    <div class="profile-actions">
+                        <button id="editUsernameBtn" class="secondary-button">
+                            <i class="fas fa-edit"></i> تعديل الاسم
+                        </button>
+                        <button id="editStatusMessageBtn" class="secondary-button">
+                            <i class="fas fa-comment-alt"></i> تعديل الحالة
+                        </button>
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="privateProfileCheckbox">
+                            <span class="checkmark"></span>
+                            قفل الملف الشخصي
+                        </label>
+                    </div>
                 </div>
-                <div class="setting-item">
-                    <label for="storageBucketInput">Storage Bucket:</label>
-                    <input type="text" id="storageBucketInput" placeholder="Storage Bucket">
+
+                <!-- قائمة المنشورات المحفوظة في الملف الشخصي -->
+                <div class="card saved-posts-card">
+                    <h3>
+                        <i class="fas fa-bookmark"></i> المنشورات المحفوظة
+                    </h3>
+                    <div id="savedPostsList" class="posts-list">
+                        <!-- المنشورات المحفوظة ستعرض هنا -->
+                        <div class="empty">لا توجد منشورات محفوظة.</div>
+                    </div>
                 </div>
-                <div class="setting-item">
-                    <label for="messagingSenderIdInput">Messaging Sender ID:</label>
-                    <input type="text" id="messagingSenderIdInput" placeholder="Messaging Sender ID">
+
+                <!-- إعدادات Firebase (فقط للمسؤول) -->
+                <div id="settingsCard" class="card settings-card" style="display: none;">
+                    <h3>
+                        <i class="fas fa-tools"></i> إعدادات Firebase
+                    </h3>
+                    <form id="settingsForm" class="settings-form">
+                        <label for="apiKeyInput">API Key:</label>
+                        <input type="text" id="apiKeyInput" required>
+
+                        <label for="authDomainInput">Auth Domain:</label>
+                        <input type="text" id="authDomainInput" required>
+
+                        <label for="databaseURLInput">Database URL:</label>
+                        <input type="text" id="databaseURLInput" placeholder="(اختياري)" >
+
+                        <label for="projectIdInput">Project ID:</label>
+                        <input type="text" id="projectIdInput" required>
+
+                        <label for="storageBucketInput">Storage Bucket:</label>
+                        <input type="text" id="storageBucketInput" placeholder="(اختياري)">
+
+                        <label for="messagingSenderIdInput">Messaging Sender ID:</label>
+                        <input type="text" id="messagingSenderIdInput" required>
+
+                        <label for="appIdInput">App ID:</label>
+                        <input type="text" id="appIdInput" required>
+
+                        <button type="button" id="saveFirebaseConfigBtn" class="primary-button">
+                            <i class="fas fa-save"></i> حفظ إعدادات Firebase
+                        </button>
+                        <p id="firebaseConfigMessage" class="error-message"></p>
+                    </form>
                 </div>
-                <div class="setting-item">
-                    <label for="appIdInput">App ID:</label>
-                    <input type="text" id="appIdInput" placeholder="App ID">
-                </div>
-                <button id="saveFirebaseConfigBtn">حفظ إعدادات Firebase</button>
-                <div id="firebaseConfigMessage" class="error-message"></div>
-            </div>
-        </div>
+            </section>
+        </main>
     </div>
 
+    <!-- Firebase SDK (تم التحديث إلى 9.1.0 لضمان التوافق والأداء) -->
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-firestore-compat.js"></script>
+    
+    <!-- ملفات JavaScript الخاصة بالمشروع -->
     <script src="firebase-config.js"></script>
     <script src="auth.js"></script>
     <script src="firestore.js"></script>
